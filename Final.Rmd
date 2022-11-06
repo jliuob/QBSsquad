@@ -11,6 +11,7 @@ library(tidyverse)
 library(plyr)
 library(dplyr)
 library(data.table)
+library(countrycode)
 ```
 
 Read in the raw data
@@ -123,9 +124,6 @@ CO2total_byCountry
  
  Aim 1.2A: To visualize the cumulative CO2 emissions by continent
 ```{r}
-#install.packages("countrycode")
-library(countrycode)
-
 CO2total_byCountry$continent <- countrycode(sourcevar = CO2total_byCountry[,"Country"],
                                   origin = "country.name",
                                   destination = "continent")
