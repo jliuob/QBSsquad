@@ -25,7 +25,7 @@ rawCO2<-CO2
 rawCO2%>% summarise_all(~ sum(is.na(.)))
 ```
 
-Find all the countires with NA in each column
+Find all the countries with NA in each column
 ```{r}
 naCode <- rawCO2 %>% filter(is.na(Code)) %>% distinct(Country) 
 naCall <- rawCO2 %>% filter(is.na(Calling.Code)) %>% distinct(Country)
