@@ -25,7 +25,7 @@ rawCO2<-CO2
 rawCO2%>% summarise_all(~ sum(is.na(.)))
 ```
 
-Find all the countires with NA in each column
+Find all the countries with NA in each column
 ```{r}
 naCode <- rawCO2 %>% filter(is.na(Code)) %>% distinct(Country) 
 naCall <- rawCO2 %>% filter(is.na(Calling.Code)) %>% distinct(Country)
@@ -74,7 +74,23 @@ Find a threshold to evaluate which NAs to keep.
 dat20 <- rawCO2 %>% filter(Year == 2020)
 summary(dat20$CO2.emission..Tons.)
 ```
-We decided to use the lower quarter 301100000/45060000 as a threshold, any country have the 2020 CO2 emission lower than that we are gonna omit. 
+We decided to use the lower quarter 45060000 as a threshold, any country have the 2020 CO2 emission lower than that we are gonna omit. For the detailed cleaning process, see the meta data page in excel.
+
+
+```{r}
+cleanDat<-read.csv("CO2_Cleaned_V2.csv",na = c("","NA"))
+
+#again, check for all the NA entries
+cleanDat %>% summarise_all(~ sum(is.na(.)))
+#check the dimension of data
+dim(cleanDat)
+```
+
+```{r}
+cleanDat <- cleanDat %>% select(-c(8,9))
+head(cleanDat)
+```
+###Please proceed with this cleanDat (don't forget to omit.na)
 
 
 
