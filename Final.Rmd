@@ -15,126 +15,108 @@ library(data.table)
 
 Read in the raw data
 ```{r}
-rawCO2<-read.csv("CO2_emission_by_countries.csv")
+CO2 <- read.csv("CO2_emission_by_countries.csv", na = c("", "NA"), sep=",")
 ```
 
+Check for all the NA entries
 ```{r}
-colnames(rawCO2)
-dim(rawCO2)
+rawCO2<-CO2 %>% summarise_all(~ sum(is.na(.)))
 ```
 
-Checking for NA's in each column
+Find all the countires with NA in each column
 ```{r}
-#na_count <-sapply(rawDat$Code, function(y) sum(length(which(is.na(y)))))
-#na_count
+naCode <- rawCO2 %>% filter(is.na(Code)) %>% distinct(Country) 
+naCall <- rawCO2 %>% filter(is.na(Calling.Code)) %>% distinct(Country)
+naPopu <- rawCO2 %>% filter(is.na(Population.2022.)) %>% distinct(Country)
+naArea <- rawCO2 %>% filter(is.na(Area)) %>% distinct(Country)
+naXPre <- rawCO2 %>% filter(is.na(X..of.World)) %>% distinct(Country)
+naDens <- rawCO2 %>% filter(is.na(Density.km2.)) %>% distinct(Country)
 
-rawCO2 %>% summarise_all(~ sum(is.na(.)))
-naCheck <- data.frame(
-  Code = rep(NA,1),
-  Popu = rep(NA,24),
-  Area = rep(NA,16)
-)
-naCheck1 <- rawCO2 %>% filter (is.na(Code)) %>% distinct(Country)
-#The only country that does not have Code is Namibia
-naCheck2 <- rawCO2 %>% filter (is.na(Population.2022.)) %>% distinct(Country)
-naCheck3 <- rawCO2 %>% filter (is.na(Area)) %>% distinct(Country)
-
-naCheck4 <- union(naCheck1,naCheck2)
-naCheckUni <- union(naCheck4,naCheck3)
-naCheckInt <- intersect(naCheck2, naCheck3)
-naCheckInt
-naCheckUni #All the countries that we removed
-
-# naCheck$Popu <- naCheck2$Country
-# naCheck$Code <- naCheck1$Country
-# naCheck$Area <- naCheck3$Country
-
+allNA <- bind_rows(naCode,naCall,naPopu,naArea,naXPre,naDens)
+allNA <- distinct(allNA) %>% arrange(Country)
 ```
 
-
+Combine all the table above to better see which values are missing
 ```{r}
-naCal <- rawCO2 %>% filter(is.na(Code))
-naCal1 <- rawCO2 %>% filter(is.na(Population.2022.)) %>% union_all(naCal)
-naCal2 <- rawCO2 %>% filter(is.na(Area)) %>% union(naCal1)
-naCal2 %>% distinct(Country)
-#All the countries that have NA in the entry 
-barplot(tapply(naCal2$CO2.emission..Tons., format(naCal2$Year), FUN=sum), col="#69b3a2")
-tapply(naCal2$CO2.emission..Tons., format(naCal2$Year), FUN=sum)
-View(naCal2)
-#To calculate the total emissions by year for the countries that have NA
+nacheck<-function(str){
+  df<- get(str)
+  df$UniC <- df$Country
+  colnames(df)[1] = str
+  return(df)
+}
+naCode<- nacheck("naCode")
+naCall<- nacheck("naCall")
+naPopu<- nacheck("naPopu")
+naArea<- nacheck("naArea")
+naXPre<- nacheck("naXPre")
+naDens<- nacheck("naDens")
 ```
 
+join all the table together
 ```{r}
-naCal2 <- 
-```
-
-for the global data we have the global total as 1.584224e+12 (Year 2018) 1.620243e+12 (Year 2019) 1.654088e+12 (Year 2020) sum for 
-```{r}
-1620287883/16557615377
-360375192/16557615377
-
-16557615377/1.654088e+12
-```
-
-```{r}
-#table(rawDat$Country)
+allNATable<-allNA %>% full_join(naCode,by = c("Country" = "UniC")) %>% 
+  full_join(naCall,by = c("Country" = "UniC")) %>%
+  full_join(naPopu,by = c("Country" = "UniC")) %>%
+  full_join(naArea,by = c("Country" = "UniC")) %>%
+  full_join(naXPre,by = c("Country" = "UniC")) %>%
+  full_join(naDens,by = c("Country" = "UniC"))
+view(allNATable)
 ```
 
 David & Will
 ```{r}
 #finding and removing NAs
-C02 <- read.csv("CO2_emission_by_countries.csv", sep=",")
-C02 <- na.omit(C02)
+CO2 <- na.omit(CO2)
 
 #filter emissions 0 and use tidyverse groupby country minimum year
 
-C02_no0<-C02 %>% group_by(min(Year)) %>% filter(CO2.emission..Tons.!=0)
-C02_no0
+CO2_no0<-CO2 %>% group_by(min(Year)) %>% filter(CO2.emission..Tons.!=0)
+CO2_no0
 
-which(C02[C02_data$CO2emissions_tons==0])
+which(CO2[CO2_data$CO2emissions_tons==0])
 
 
-C02_no0 %>% 
+CO2_no0 %>% 
     group_by(Country) %>% 
     slice(which.min(Year))
  
-C02_no0[C02_no0$Country=="United States"]
-C02_no0 <- data.table(C02_no0)
+CO2_no0[CO2_no0$Country=="United States"]
+CO2_no0 <- data.table(CO2_no0)
 
-#finding  firstyear where C02 is nonzero value
-C02_no_year_min <- C02_no0[ , list(Year = min(Year)), by = Country] 
-C02_no_year_min[]
+#finding  firstyear where CO2 is nonzero value
+CO2_no_year_min <- CO2_no0[ , list(Year = min(Year)), by = Country] 
+CO2_no_year_min[]
 
-C02_no0[C02_no0$Country=="Albania"]
+CO2_no0[CO2_no0$Country=="Albania"]
 ```
 
 ```{r}
-#finding C02 emission/population 
+#finding CO2 emission/population 
 
-C02total_byCountry <- aggregate(C02_no0$CO2.emission..Tons., by=list(Category=C02_no0$Country), FUN=sum) 
+CO2total_byCountry <- aggregate(CO2_no0$CO2.emission..Tons., by=list(Category=CO2_no0$Country), FUN=sum) 
 
 
 
-colnames(C02total_byCountry)[1] <- "Country"
-colnames(C02total_byCountry)[2] <- "C02.Total"
+colnames(CO2total_byCountry)[1] <- "Country"
+colnames(CO2total_byCountry)[2] <- "CO2.Total"
 
-C02total_byCountry
+CO2total_byCountry
 
 #removing duplicates
-C02_duplicates <- C02_no0[!duplicated(C02_no0$Country),]
-C02_duplicates 
+CO2_duplicates <- CO2_no0[!duplicated(CO2_no0$Country),]
+CO2_duplicates 
 
-C02total_byCountry <- C02total_byCountry %>% inner_join(C02_duplicates) %>% select("Country","C02.Total","Population.2022.")
+CO2total_byCountry <- CO2total_byCountry %>% inner_join(CO2_duplicates) %>% select("Country","CO2.Total","Population.2022.")
 
-C02total_byCountry$C02perPop <- NULL
-C02total_byCountry$C02perPop <- C02total_byCountry$C02.Total/C02total_byCountry$Population.2022.
-C02total_byCountry
+CO2total_byCountry$CO2perPop <- NULL
+CO2total_byCountry$CO2perPop <- CO2total_byCountry$CO2.Total/CO2total_byCountry$Population.2022.
+CO2total_byCountry
 
-colnames(C02total_byCountry)[2] <- "C02.Total.Per.Country"
-colnames(C02total_byCountry)[4] <- "C02.per.Person.per.Country"
+colnames(CO2total_byCountry)[2] <- "CO2.Total.Per.Country"
+colnames(CO2total_byCountry)[4] <- "CO2.per.Person.per.Country"
 
-summary(C02total_byCountry)
-C02total_byCountry 
+summary(CO2total_byCountry)
+CO2total_byCountry 
 
 ```
  
@@ -144,26 +126,26 @@ C02total_byCountry
 #install.packages("countrycode")
 library(countrycode)
 
-C02total_byCountry$continent <- countrycode(sourcevar = C02total_byCountry[,"Country"],
+CO2total_byCountry$continent <- countrycode(sourcevar = CO2total_byCountry[,"Country"],
                                   origin = "country.name",
                                   destination = "continent")
 
-C02total_byContinent <- aggregate(C02total_byCountry$C02.Total.Per.Country, by=list(Category=C02total_byCountry$continent), FUN=sum)
+CO2total_byContinent <- aggregate(CO2total_byCountry$CO2.Total.Per.Country, by=list(Category=CO2total_byCountry$continent), FUN=sum)
 
-C02total_byContinent 
-barplot(C02total_byContinent$Total_CO2_Emissions~C02total_byContinent$Geographic_Region) #make this plot pretty
-colnames(C02total_byContinent) <- c("Geographic_Region","Total_CO2_Emissions")
+CO2total_byContinent 
+barplot(CO2total_byContinent$Total_CO2_Emissions~CO2total_byContinent$Geographic_Region) #make this plot pretty
+colnames(CO2total_byContinent) <- c("Geographic_Region","Total_CO2_Emissions")
 ```
  
-Analyze the top 10 countries that emit the most C02
+Analyze the top 10 countries that emit the most CO2
 ```{r}
-top10Countries <- C02total_byCountry[order(-C02total_byCountry$C02.Total.Per.Country),]
+top10Countries <- CO2total_byCountry[order(-CO2total_byCountry$CO2.Total.Per.Country),]
 top10Countries <- head(top10Countries,10)
-plot(C02total_byCountry$C02.per.Person.per.Country,C02total_byCountry$Population.2022.)
-legend(x = 0, y=0,c(C02total_byCountry$C02.per.Person.per.Country,C02total_byCountry$Population.2022.),
+plot(CO2total_byCountry$CO2.per.Person.per.Country,CO2total_byCountry$Population.2022.)
+legend(x = 0, y=0,c(CO2total_byCountry$CO2.per.Person.per.Country,CO2total_byCountry$Population.2022.),
        cex=0.8,col=c("red","blue"))
 
-ggplot(top10Countries,aes(x=C02.per.Person.per.Country,y=C02.Total.Per.Country))+
+ggplot(top10Countries,aes(x=CO2.per.Person.per.Country,y=CO2.Total.Per.Country))+
   geom_point(aes(y=continent))
   
   
