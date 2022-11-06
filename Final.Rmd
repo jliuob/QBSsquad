@@ -21,7 +21,8 @@ CO2 <- read.csv("CO2_emission_by_countries.csv", na = c("", "NA"), sep=",")
 
 Check for all the NA entries
 ```{r}
-rawCO2<-CO2 %>% summarise_all(~ sum(is.na(.)))
+rawCO2<-CO2 
+rawCO2%>% summarise_all(~ sum(is.na(.)))
 ```
 
 Find all the countires with NA in each column
