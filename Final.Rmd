@@ -1,0 +1,79 @@
+---
+title: "Final"
+author: "Jennifer Liu"
+date: "2022-11-05"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(plyr)
+```
+
+Read in the raw data
+```{r}
+rawDat<-read.csv("CO2 emission by countries.csv")
+```
+
+```{r}
+colnames(rawDat)
+dim(rawDat)
+```
+
+Checking for NA's in each column
+```{r}
+#na_count <-sapply(rawDat$Code, function(y) sum(length(which(is.na(y)))))
+#na_count
+
+rawDat %>% summarise_all(~ sum(is.na(.)))
+naCheck <- data.frame(
+  Code = rep(NA,1),
+  Popu = rep(NA,24),
+  Area = rep(NA,16)
+)
+naCheck1 <- rawDat %>% filter (is.na(Code)) %>% distinct(Country)
+#The only country that does not have Code is Namibia
+naCheck2 <- rawDat %>% filter (is.na(Population.2022.)) %>% distinct(Country)
+naCheck3 <- rawDat %>% filter (is.na(Area)) %>% distinct(Country)
+
+naCheck4 <- union(naCheck1,naCheck2)
+naCheckUni <- union(naCheck4,naCheck3)
+naCheckInt <- intersect(naCheck2, naCheck3)
+naCheckInt
+naCheckUni #All the countries that we removed
+
+# naCheck$Popu <- naCheck2$Country
+# naCheck$Code <- naCheck1$Country
+# naCheck$Area <- naCheck3$Country
+
+```
+
+
+```{r}
+naCal <- rawDat %>% filter(is.na(Code))
+naCal1 <- rawDat %>% filter(is.na(Population.2022.)) %>% union_all(naCal)
+naCal2 <- rawDat %>% filter(is.na(Area)) %>% union(naCal1)
+naCal2 %>% distinct(Country)
+#All the countries that have NA in the entry 
+barplot(tapply(naCal2$CO2.emission..Tons., format(naCal2$Year), FUN=sum), col="#69b3a2")
+tapply(naCal2$CO2.emission..Tons., format(naCal2$Year), FUN=sum)
+View(naCal2)
+#To calculate the total emissions by year for the countries that have NA
+```
+
+```{r}
+naCal2 <- 
+```
+
+for the global data we have the global total as 1.584224e+12 (Year 2018) 1.620243e+12 (Year 2019) 1.654088e+12 (Year 2020) sum for 
+```{r}
+1620287883/16557615377
+360375192/16557615377
+
+16557615377/1.654088e+12
+```
+
+```{r}
+#table(rawDat$Country)
+```
