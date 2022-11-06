@@ -1,6 +1,6 @@
 ---
 title: "Final"
-author: "Jennifer Liu"
+author: "Jennifer Liu, Xinwen Xu"
 date: "2022-11-05"
 output: pdf_document
 ---
@@ -54,7 +54,7 @@ naXPre<- nacheck("naXPre")
 naDens<- nacheck("naDens")
 ```
 
-join all the table together
+Join all the tables together, to get a whole view
 ```{r}
 allNATable<-allNA %>% full_join(naCode,by = c("Country" = "UniC")) %>% 
   full_join(naCall,by = c("Country" = "UniC")) %>%
@@ -64,6 +64,20 @@ allNATable<-allNA %>% full_join(naCode,by = c("Country" = "UniC")) %>%
   full_join(naDens,by = c("Country" = "UniC"))
 view(allNATable)
 ```
+
+```{r}
+write.csv(allNATable, file = "OriginalNAs.csv",row.names = TRUE)
+```
+
+Find a threshold to evaluate which NAs to keep. 
+```{r}
+dat20 <- rawCO2 %>% filter(Year == 2020)
+summary(dat20$CO2.emission..Tons.)
+```
+We decided to use the lower quarter 301100000/45060000 as a threshold, any country have the 2020 CO2 emission lower than that we are gonna omit. 
+
+
+
 
 David & Will
 ```{r}
