@@ -10,10 +10,14 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 ```{r}
-dat1 <- read.csv("~/Documents/QBS181/CO2 emission by countries.csv")
+library(httr); library(RCurl)
 x <- getURL("https://raw.githubusercontent.com/owid/co2-data/master/owid-co2-data.csv")
 dat2 <- read.csv(text = x)
-class(world.co2)
+y <- getURL("https://raw.githubusercontent.com/jliuob/QBSsquad/main/CO2_Cleaned_V2.csv")
+dat1 <- read.csv(text = y)
+class(dat1)
+class(dat2)
+colnames(dat1)[1] <- "Country"
 ```
 
 ```{r}
