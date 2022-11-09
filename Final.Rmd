@@ -90,9 +90,9 @@ CO2_no_year_min <- CO2_no0[, list(Year = min(Year)), by = Country]
 CO2_no_year_min[]
 
 #graphic of start years for different countries
-plot(CO2_no_year_min$Year)
-
-CO2_no0[CO2_no0$Country=="Albania"]
+plot(CO2_no_year_min$Year,main="Earliest Year with CO2 Data",
+     xlab="Index",ylab="Year")
+abline(h=1950,col="blue")
 ```
 
 ```{r}
@@ -121,7 +121,7 @@ CO2total_byCountry
  
  
  Aim 1.2A: To visualize the cumulative CO2 emissions by continent
-```{r}
+```{r,message=FALSE}
 CO2total_byCountry$continent <- countrycode(sourcevar = CO2total_byCountry[,"Country"],
                                   origin = "country.name",
                                   destination = "continent")
@@ -129,8 +129,46 @@ CO2total_byCountry$continent <- countrycode(sourcevar = CO2total_byCountry[,"Cou
 CO2total_byContinent <- aggregate(CO2total_byCountry$CO2.Total.Per.Country, by=list(Category=CO2total_byCountry$continent), FUN=sum)
 
 CO2total_byContinent 
-barplot(CO2total_byContinent$x~CO2total_byContinent$Category) #make this plot pretty
 colnames(CO2total_byContinent) <- c("Geographic_Region","Total_CO2_Emissions")
+barplot(CO2total_byContinent$Total_CO2_Emissions~CO2total_byContinent$Geographic_Region) #make this plot pretty
+
+library(tmap)
+library(sf)
+library(raster)
+library(spData)
+library(maptools)
+library(rworldmap)
+data("World")
+data("wrld_simpl")
+data("countryExData")
+
+world <- map_data("world")
+View(world)
+#Add the data you want to map countries by to world
+#In this example, I add lengths of country names plus some offset
+
+which(CO2total_byCountry$Country=="United States")
+CO2total_byCountry$Country[171] <- "USA" #coding USA differently 
+#because world data has it as USA, but CO2 data has it as United States
+which(world$region=="USA")
+CO2total_byCountry[171,]
+
+world <- inner_join(world,CO2total_byCountry,by=c("region"="Country"))
+
+#barplot of CO2 total emissions in world map
+continent_barplot <- ggplot(data=subset(CO2total_byCountry,!is.na(continent)),aes(x=continent,y=CO2.Total.Per.Country,fill=continent)) + geom_bar(stat="identity",position="dodge")
+
+continent_barplot <- continent_barplot + labs(x="Continent",y="Total CO2 Emissions (Tons)",title="CO2 Totals by Continent",fill="Continent")
+continent_barplot
+
+#graphically presenting CO2 emission in world map
+gg <- ggplot() + theme(legend.position="bottom",legend.key.size = unit(0.5, "cm"),legend.key.width = unit(1,"cm")) + labs(fill="CO2 Total(tons)/Country",x="Longitude",y="Latitude")
+gg <- gg + geom_map(data=world, map=world, aes(map_id=region,x=long, y=lat, fill=CO2.Total.Per.Country))
+
+gg <- gg + scale_fill_gradient(low = "green", high = "red", guide = "colourbar",aesthetics = "fill") + scale_y_continuous(limits = c(-100,100)) + scale_x_continuous(limits = c(-175,175)) + scale_colour_continuous(labels="scientific")
+gg <- gg + coord_equal() + ggtitle("World View of CO2 Emissions")
+gg
+
 ```
  
 Analyze the top 10 countries that emit the most CO2
@@ -159,10 +197,10 @@ colnames(top3pContinent)
 mostEmissions +
   geom_text_repel(aes(label = Country), size = 2.5)+
   geom_point(aes(colour=CO2.Total.Per.Country))+
-  ggtitle(expression(atop("Top 3 C02 Country Emissions per Continent",
-                          atop(italic("C02 Total from Available Data"),""))))+
+  ggtitle(expression(atop("Top 3 CO2 Country Emissions per Continent",
+                          atop(italic("CO2 Total from Available Data"),""))))+
   xlab("Continent") +
-  ylab("C02 Emissions in Tons")+
+  ylab("CO2 Emissions in Tons")+
   theme(text = element_text(family = 'serif'))+
   theme(plot.title = element_text(hjust=0.5))
 
@@ -170,8 +208,35 @@ mostEmissions +
 
 C02 Emissions by Landmass:
 ```{r}
+cleanedC02 <- read.csv("~/Desktop/QBS/QBS181/FinalProject/QBSsquad/CO2_Cleaned_V2.csv",sep=",")
 
+View(cleanedC02)
+colnames(cleanedC02)
 
+cleanedC02 <- cleanedC02[!duplicated(cleanedC02$Country),]
+cleanedC02 <- inner_join(cleanedC02,CO2total_byCountry) %>% select("Country","Area","X..of.World","CO2.Total.Per.Country")
+
+View(cleanedC02)
+  
+colnames(CO2total_byCountry)
+cleanedC02$X..of.World <- as.numeric(gsub("[\\%,]","",cleanedC02$X..of.World))
+str(cleanedC02$CO2.Total.Per.Country)
+
+landmass_C02_model <- lm(cleanedC02$CO2.Total.Per.Country~cleanedC02$Area,data=cleanedC02)
+
+summary(landmass_C02_model)
+
+plot(cleanedC02$CO2.Total.Per.Country~cleanedC02$Area,xlab="Country_Area",ylab="CO2 Total in Tons")
+title(main="CO2 Total vs. Country Area")
+legend("topleft",legend=paste("R-squared is ",format(summary(landmass_C02_model)$r.squared,digits=3)))
+
+mod1 <- lm(Area~CO2.Total.Per.Country,data=cleanedC02)
+
+plot(mod1)
+
+ggplot(data=cleanedC02,aes(x=Area,y=CO2.Total.Per.Country))+geom_point(stat="identity")
+
+#lets write that even if there's no association, why we did that.
 
 ```
 
@@ -198,6 +263,7 @@ d2.gdp, d2.co2_per_gdp, d2.co2_per_capita, d2.coal_co2, d2.coal_co2_per_capita
 merged.dat
 merged.dat <- na.omit(merged.dat)
 ```
+
 Finding Averages:
 ```{r}
 avgCO2byCountry <- aggregate(merged.dat$CO2.emission..Tons.,by=list(Category=merged.dat$Country), FUN=mean)
@@ -260,4 +326,5 @@ barplot(DevelopvsDeveloping,names.arg = c("Developed","Developing"))
 
 
 ```
+
 
