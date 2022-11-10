@@ -1,0 +1,211 @@
+---
+title: "Aim2 analysis"
+author: "Yuxuan Peng"
+date: "2022-11-02"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+```
+
+First, to examine global CO2 emission in pre-pandemic and pandemic years, a subset of data about 2018, 2019, and 2020 CO2 emission in all countries is created.
+```{r}
+CO2 <- read.csv("CO2 emission by countries.csv")
+head(CO2)
+library(dplyr)
+library(tidyverse)
+pandemic.CO2 <- CO2 %>%
+  filter(Year >= 2018, na.rm = TRUE)
+head(pandemic.CO2)
+```
+
+Then, we want to explore the general trend of changes in CO2 emission in all countries due to the pandemic. Thus, we presented the global cumulative CO2 emission during these three years.
+```{r}
+cum.2018 <- sum(pandemic.CO2[which(pandemic.CO2$Year=='2018'), 5])
+cum.2019 <- sum(pandemic.CO2[which(pandemic.CO2$Year=='2019'), 5])
+cum.2020 <- sum(pandemic.CO2[which(pandemic.CO2$Year=='2020'), 5])
+
+barplot(tapply(pandemic.CO2$CO2.emission..Tons., format(pandemic.CO2$Year), FUN=sum), col="#69b3a2")
+```
+
+We could see from the graph that there's not much change in global cumulative CO2 emission during the pandemic years. Here we want to separately analyze the top5 emission countries and see if there's any difference.
+```{r}
+CO2.a <- pandemic.CO2 %>% 
+  filter(Year == "2018") %>%
+  arrange(desc(CO2.emission..Tons.)) %>%
+  slice_head(n = 5)
+CO2.a
+
+CO2.b <- pandemic.CO2 %>% 
+  filter(Year == "2019") %>%
+  arrange(desc(CO2.emission..Tons.)) %>%
+  slice_head(n = 5)
+CO2.b
+
+CO2.c <- pandemic.CO2 %>% 
+  filter(Year == "2020") %>%
+  arrange(desc(CO2.emission..Tons.)) %>%
+  slice_head(n = 5)
+CO2.c
+df.top5 = rbind(CO2.a,CO2.b,CO2.c)
+
+
+ggplot(df.top5, aes(x = Year, y = CO2.emission..Tons., color = Country)) +
+  geom_line()
+```
+As shown in this graph, although the overall CO2 emission in these 5 top emission countries slightly increased during pandemic, there's still not much difference observed. This is not what we've expected before since we expect the emission rate to decrease during the pandemic.
+
+Now we want to join another dataset with information about absolute growth of CO2 and other information about CO2 per capita/gdp/unit energy to explore further on pandemic-CO2 emission relationship.
+First, we read our new dataset about owid-co2-data from github and filtered the wanted period.
+```{r}
+library(httr); library(RCurl)
+res = GET("https://github.com/owid/co2-data")
+
+x <- getURL("https://raw.githubusercontent.com/owid/co2-data/master/owid-co2-data.csv")
+world.co2 <- read.csv(text = x)
+class(world.co2)
+world.pandemic <- world.co2 %>%
+  filter(year >= 1990, na.rm = TRUE)
+```
+
+Then we joined the two datasets based on country names. Here we used SQL to make the join.
+```{r}
+library(sqldf)
+tot.dat <- sqldf("SELECT p.Country, p.year, p.'CO2.emission..Tons.' AS 'co2 emission(tons)', p.'Population.2022.' AS population, p.Area, w.co2_growth_abs, w.co2_growth_prct, w.co2_per_capita
+      FROM 'pandemic.CO2' AS p
+      JOIN 'world.pandemic' AS w 
+      ON p.Country=w.country
+      AND p.Year=w.year")
+```
+
+Now we wanted to plot the absolute growth of co2 emission during the pandemic in a global perspective. First, let's check if there are any missing values in our interested data.
+```{r}
+sum(is.na(tot.dat$co2_growth_abs))
+which(is.na(tot.dat$co2_growth_abs))
+```
+NAs are located at Antarctica, Christmas Island, and Puerto Rico. We noticed that there might be no data available for those countries so we just denoted them as 0.
+```{r}
+tot.dat$co2_growth_abs[is.na(tot.dat$co2_growth_abs)] = 0
+#check again
+sum(is.na(tot.dat$co2_growth_abs))
+```
+
+Now we can visualize our results regarding absolute growth of CO2 emission. First, let's check if there's difference in the absolute CO2 growth during the pandemic.
+```{r}
+a <- sum(tot.dat[which(tot.dat$Year=='2018'), 6])
+b <- sum(tot.dat[which(tot.dat$Year=='2019'), 6])
+c <- sum(tot.dat[which(tot.dat$Year=='2020'), 6])
+co2.gr <- c(a,b,c)
+plot(co2.gr, type = "line")
+```
+
+Then we plotted the absolute co2 growth and co2 emission per-capita during the pandemic in countries with the highest overall co2 emission these years.
+```{r}
+tot.dat <- tot.dat %>%
+  arrange(desc(`co2 emission(tons)`))
+top.co2 <- tot.dat[1:30,]
+
+ggplot(top.co2, aes(x = Year, y = co2_growth_abs, color = Country)) +
+  geom_line()
+ggplot(top.co2, aes(x = Year, y = co2_per_capita, color = Country)) +
+  geom_line()
+```
+
+Next, we want to see if we randomly sample several countries out and analyze their absolute growth in co2 emission, would it follow the same trend.
+```{r}
+sam.co2 <- sample_n(tot.dat,10)
+
+ggplot(sam.co2, aes(x = Year, y = co2_growth_abs, color = Country)) +
+  geom_line()
+```
+
+To further explore the relationship and intensity of different features in our dataset, we filtered out top 10 co2 emission countries each year and presented our observations in a heatmap.
+```{r}
+CO2.1 <- tot.dat %>% 
+  filter(Year == "2018") %>%
+  arrange(desc(`co2 emission(tons)`)) %>%
+  slice_head(n = 10)
+
+
+CO2.2 <- tot.dat %>% 
+  filter(Year == "2019") %>%
+  arrange(desc(`co2 emission(tons)`)) %>%
+  slice_head(n = 10)
+
+
+CO2.3 <- tot.dat %>% 
+  filter(Year == "2020") %>%
+  arrange(desc(`co2 emission(tons)`)) %>%
+  slice_head(n = 10)
+
+co2.top10 = rbind(CO2.1,CO2.2,CO2.3)
+co2.top10$Country_Year <- paste(co2.top10$Country, co2.top10$Year)
+rownames(co2.top10) <- co2.top10[, 9]
+
+library(magrittr)
+co2.top10 %<>% arrange(Country_Year)
+
+library(RColorBrewer)
+dir.create("folder")
+heatmaply(percentize(co2.top10)[-(1:2)],
+          xlab = "Features",
+          ylab = "Country Year",
+          main = "Features related to CO2 emission during pandemic in top10 CO2 emission countries",
+          margins = c(60,100,40,20),
+          colors = colorRampPalette(brewer.pal(3, "RdBu"))(256),
+          seriate = "OLO",
+          heatmap_layers = theme(axis.line=element_blank()),
+          file = "folder/CO2_plot.html")
+browseURL("folder/heatmaply_plot.html")
+```
+
+We did the same thing by filtered out top 10 populated countries each year and presented our observations in a heatmap.
+```{r}
+pop1 <- tot.dat %>% 
+  filter(Year == "2018") %>%
+  arrange(desc(population)) %>%
+  slice_head(n = 10)
+
+
+pop2 <- tot.dat %>% 
+  filter(Year == "2019") %>%
+  arrange(desc(population)) %>%
+  slice_head(n = 10)
+
+
+pop3 <- tot.dat %>% 
+  filter(Year == "2020") %>%
+  arrange(desc(population)) %>%
+  slice_head(n = 10)
+
+pop.top10 = rbind(pop1,pop2,pop3)
+pop.top10$Country_Year <- paste(pop.top10$Country, pop.top10$Year)
+rownames(pop.top10) <- pop.top10[, 9]
+
+pop.top10 %<>% arrange(Country_Year)
+
+dir.create("folder")
+heatmaply(percentize(pop.top10)[-(1:2)],
+          xlab = "Features",
+          ylab = "Country Year",
+          main = "Features related to CO2 emission during pandemic in top10 populated countries",
+          margins = c(60,100,40,20),
+          colors = colorRampPalette(brewer.pal(3, "RdBu"))(256),
+          seriate = "OLO",
+          heatmap_layers = theme(axis.line=element_blank()),
+          file = "folder/pop_plot.html")
+browseURL("folder/pop_plot.html")
+```
+
+
+
+
+
+
+
+
+
+
+
+
