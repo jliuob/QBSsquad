@@ -169,6 +169,22 @@ gg <- gg + scale_fill_gradient(low = "green", high = "red", guide = "colourbar",
 gg <- gg + coord_equal() + ggtitle("World View of CO2 Emissions")
 gg
 
+#saving World Heat Map
+ggsave(
+  "WorldHeatMapCO2.png",
+  gg,
+  scale = 5,
+  dpi = 1200
+)
+
+#saving continent barplot
+ggsave(
+  "CO2ContinentBarplot.png",
+  continent_barplot,
+  scale = 5,
+  dpi = 1200
+)
+
 ```
  
 Analyze the top 10 countries that emit the most CO2
@@ -194,7 +210,7 @@ library(scales)
 
 colnames(top3pContinent)
 
-mostEmissions +
+mostEmissions<- mostEmissions +
   geom_text_repel(aes(label = Country), size = 2.5)+
   geom_point(aes(colour=CO2.Total.Per.Country))+
   ggtitle(expression(atop("Top 3 CO2 Country Emissions per Continent",
@@ -204,9 +220,18 @@ mostEmissions +
   theme(text = element_text(family = 'serif'))+
   theme(plot.title = element_text(hjust=0.5))
 
+
+
+ggsave(
+  "mostEmissionperCountry.png",
+  mostEmissions,
+  width = 7.5,
+  height = 7.5,
+  dpi = 1200
+)
 ```
 
-C02 Emissions by Landmass:
+C02 Emissions by Area:
 ```{r}
 cleanedC02 <- read.csv("~/Desktop/QBS/QBS181/FinalProject/QBSsquad/CO2_Cleaned_V2.csv",sep=",")
 
@@ -231,6 +256,9 @@ title(main="CO2 Total vs. Country Area")
 legend("topleft",legend=paste("R-squared is ",format(summary(landmass_C02_model)$r.squared,digits=3)))
 
 mod1 <- lm(Area~CO2.Total.Per.Country,data=cleanedC02)
+test <- chisq.test(x=cleanedC02$Area,y=cleanedC02$CO2.Total.Per.Country)
+
+summary(test)
 
 plot(mod1)
 
@@ -279,19 +307,28 @@ avgC02perCapita_10 <- head(avgC02perCapita_10,10)
 
 
 capitaplot <- ggplot(avgC02perCapita_10,
-                     aes(Category,x))+
-  geom_bar(stat="identity",fill="lightblue") +
-  theme(axis.text.x = element_text(size = 11)) +
-  scale_x_discrete(guide = guide_axis(n.dodge = 3))+
+                     aes(Category,x,fill=Category))+
+  geom_bar(stat="identity")+
+  scale_x_discrete(guide=guide_axis(angle = 90))+
   xlab("Country")+
   ylab("C02 per Capita")+
   ggtitle(expression(atop("C02 per Capita per Country",
                           atop(italic("Top 10 Countries"),"")))) +
+  labs(fill="Country")+
   theme_gray()+
   theme(plot.title = element_text(hjust=0.5))+
   theme(text = element_text(family = 'serif'))
   
 capitaplot
+
+
+ggsave(
+  "capitaplot.png",
+  capitaplot,
+  width = 5,
+  height = 5,
+  dpi = 1200
+)
 ```
 
 C02 by GDP:
@@ -319,11 +356,32 @@ sumC02Developing <- sum(developing$CO2.emission..Tons.)
 DevelopvsDeveloping <- matrix(ncol=2,nrow=1)
 colnames(DevelopvsDeveloping)<-c("Developed","Developing")
 DevelopvsDeveloping <- c(sumC02Developed,sumC02Developing)
-DevelopvsDeveloping <- as.table(DevelopvsDeveloping)
-DevelopvsDeveloping
+DevelopvsDeveloping <- as.data.frame(DevelopvsDeveloping)
 
-barplot(DevelopvsDeveloping,names.arg = c("Developed","Developing"))
+DevelopvsDeveloping$Status <- 0
 
+DevelopvsDeveloping$Status <- c("Developed","Developing")
+
+colnames(DevelopvsDeveloping)[1] <- "CO2_Total"
+
+
+DevelopvDevelopingplot <- ggplot(DevelopvsDeveloping,aes(x=Status,y=CO2_Total,fill=Status))+
+  geom_bar(stat="identity") +
+  theme(axis.text.x = element_text(size = 11)) +
+  scale_x_discrete(guide = guide_axis(n.dodge = 3))+
+  xlab(c("Development Status"))+
+  ylab("C02 Total Tons")+
+  ggtitle("C02 Emission Differences by Development Status")+
+  theme_gray()+
+  theme(plot.title = element_text(hjust=0.5))+
+  theme(text = element_text(family = 'serif'))
+
+ggsave(
+  "developCO2plot.png",
+  DevelopvDevelopingplot,
+  scale = 3,
+  dpi = 1200
+)
 
 ```
 
