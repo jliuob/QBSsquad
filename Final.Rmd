@@ -12,9 +12,20 @@ library(plyr)
 library(dplyr)
 library(data.table)
 library(countrycode)
+library(ggrepel) 
+library(magick)
+library(scales)
+library(ggplot2)
+library(ggpubr)
+library(maptools)
+library(rworldmap)
+library(RCurl)
+library(httr)
+library(sqldf)
 ```
 
 Read in the raw data
+
 ```{r}
 CO2 <- read.csv("CO2_emission_by_countries.csv", na = c("", "NA"), sep=",")
 ```
@@ -130,17 +141,6 @@ CO2total_byContinent <- aggregate(CO2total_byCountry$CO2.Total.Per.Country, by=l
 
 CO2total_byContinent 
 colnames(CO2total_byContinent) <- c("Geographic_Region","Total_CO2_Emissions")
-barplot(CO2total_byContinent$Total_CO2_Emissions~CO2total_byContinent$Geographic_Region) #make this plot pretty
-
-library(tmap)
-library(sf)
-library(raster)
-library(spData)
-library(maptools)
-library(rworldmap)
-data("World")
-data("wrld_simpl")
-data("countryExData")
 
 world <- map_data("world")
 View(world)
@@ -173,7 +173,8 @@ gg
 ggsave(
   "WorldHeatMapCO2.png",
   gg,
-  scale = 5,
+  height = 5,
+  width = 7,
   dpi = 1200
 )
 
@@ -204,9 +205,6 @@ colnames(top3pContinent)
 mostEmissions <- ggplot(top3pContinent,aes(x=continent,y=CO2.Total.Per.Country))
  
 colnames(top10Countries)
-library(ggrepel) 
-library(magick)
-library(scales)
 
 colnames(top3pContinent)
 
@@ -217,7 +215,6 @@ mostEmissions<- mostEmissions +
                           atop(italic("CO2 Total from Available Data"),""))))+
   xlab("Continent") +
   ylab("CO2 Emissions in Tons")+
-  theme(text = element_text(family = 'serif'))+
   theme(plot.title = element_text(hjust=0.5))
 
 
@@ -225,14 +222,14 @@ mostEmissions<- mostEmissions +
 ggsave(
   "mostEmissionperCountry.png",
   mostEmissions,
-  width = 7.5,
+  width = 10,
   height = 7.5,
   dpi = 1200
 )
 ```
 
 C02 Emissions by Area:
-```{r}
+```{r,message=FALSE}
 cleanedC02 <- read.csv("~/Desktop/QBS/QBS181/FinalProject/QBSsquad/CO2_Cleaned_V2.csv",sep=",")
 
 View(cleanedC02)
@@ -245,39 +242,34 @@ View(cleanedC02)
   
 colnames(CO2total_byCountry)
 cleanedC02$X..of.World <- as.numeric(gsub("[\\%,]","",cleanedC02$X..of.World))
-str(cleanedC02$CO2.Total.Per.Country)
 
 landmass_C02_model <- lm(cleanedC02$CO2.Total.Per.Country~cleanedC02$Area,data=cleanedC02)
 
 summary(landmass_C02_model)
 
-plot(cleanedC02$CO2.Total.Per.Country~cleanedC02$Area,xlab="Country_Area",ylab="CO2 Total in Tons")
-title(main="CO2 Total vs. Country Area")
-legend("topleft",legend=paste("R-squared is ",format(summary(landmass_C02_model)$r.squared,digits=3)))
+area_co2_corr <- cor.test(cleanedC02$Area,cleanedC02$CO2.Total.Per.Country)
+landmass <- cor.test(cleanedC02$X..of.World,cleanedC02$CO2.Total.Per.Country)
 
-mod1 <- lm(Area~CO2.Total.Per.Country,data=cleanedC02)
-test <- chisq.test(x=cleanedC02$Area,y=cleanedC02$CO2.Total.Per.Country)
+areavsco2plot <- ggplot(data=cleanedC02,aes(x=Area,y=CO2.Total.Per.Country))+geom_point() + ggtitle("Country Area vs. Total CO2 Emission") + labs(x="Area",y="Total CO2 Emissions (Tons)",title="CO2 Emissions vs. Country Area (km2)") + geom_text(aes(label=ifelse(CO2.Total.Per.Country>1e13,as.character(Country),'')),hjust=1.2,vjust=0)+stat_cor(method = "pearson", label.x = 0, label.y = 2e13) 
 
-summary(test)
-
-plot(mod1)
-
-ggplot(data=cleanedC02,aes(x=Area,y=CO2.Total.Per.Country))+geom_point(stat="identity")
-
-#lets write that even if there's no association, why we did that.
+ggsave(
+  "areavsco2plot.png",
+  areavsco2plot,
+  width = 10,
+  height = 7.5,
+  dpi = 1200
+)
 
 ```
 
 C02 Emissions in Developed vs. Non-developed:
 ```{r}
-library(RCurl)
-library(httr)
 dat1 <- read.csv("~/Desktop/QBS/QBS181/FinalProject/CO2_emission_by_countries.csv", sep=",")
 x <- getURL("https://raw.githubusercontent.com/owid/co2-data/master/owid-co2-data.csv")
 dat2 <- read.csv(text = x)
 class(dat2)
 
-library(sqldf)
+
 merged.dat <- sqldf("SELECT d1.Country, d1.year, d1.`CO2.emission..Tons.`,
 d2.gdp, d2.co2_per_gdp, d2.co2_per_capita, d2.coal_co2, d2.coal_co2_per_capita
       FROM dat1 AS d1
