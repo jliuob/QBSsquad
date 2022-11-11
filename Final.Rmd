@@ -1,11 +1,18 @@
 ---
-title: "Final"
-author: "Jennifer Liu, David Kook"
-date: "2022-11-05"
+title: "Global CO2 Emissions Data Analysis"
+author: "Jennifer Liu, David Kook, Xinwen Xu, Yuxuan Peng, William Escobar"
+date: "2022-11-10"
 output: pdf_document
 ---
 
-```{r setup, include=FALSE}
+# Total CO2 Emission Analysis using data from 1750-2020
+The code below analyzes CO2 emission data from Kaggle. The three main goals are:
+1. to understand the historical cumulative emissions, 2. Present day emission
+analysis, and 3. Using this data for future emission predictions. 
+
+
+## Libraries needed for this analysis:
+```{r setup, include=FALSE, message = FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
 library(plyr)
@@ -24,20 +31,20 @@ library(httr)
 library(sqldf)
 ```
 
-Read in the raw data
+## Read in the raw data
 
-```{r}
+```{r, message = FALSE}
 CO2 <- read.csv("CO2_emission_by_countries.csv", na = c("", "NA"), sep=",")
 ```
 
-Check for all the NA entries
-```{r}
+## Check for all the NA entries
+```{r, message = FALSE}
 rawCO2<-CO2 
 rawCO2%>% summarise_all(~ sum(is.na(.)))
 ```
 
-Find all the countires with NA in each column
-```{r}
+## Find all the countires with NA in each column
+```{r, message = FALSE}
 naCode <- rawCO2 %>% filter(is.na(Code)) %>% distinct(Country) 
 naCall <- rawCO2 %>% filter(is.na(Calling.Code)) %>% distinct(Country)
 naPopu <- rawCO2 %>% filter(is.na(Population.2022.)) %>% distinct(Country)
@@ -49,8 +56,8 @@ allNA <- bind_rows(naCode,naCall,naPopu,naArea,naXPre,naDens)
 allNA <- distinct(allNA) %>% arrange(Country)
 ```
 
-Combine all the table above to better see which values are missing
-```{r}
+## Combine all the table above to better see which values are missing
+```{r, message = FALSE}
 nacheck<-function(str){
   df<- get(str)
   df$UniC <- df$Country
@@ -65,7 +72,7 @@ naXPre<- nacheck("naXPre")
 naDens<- nacheck("naDens")
 ```
 
-join all the table together
+## Join all tables together
 ```{r}
 allNATable<-allNA %>% full_join(naCode,by = c("Country" = "UniC")) %>% 
   full_join(naCall,by = c("Country" = "UniC")) %>%
@@ -76,195 +83,241 @@ allNATable<-allNA %>% full_join(naCode,by = c("Country" = "UniC")) %>%
 view(allNATable)
 ```
 
-David & Will
-```{r}
-#finding and removing NAs
-CO2 <- na.omit(CO2)
-View(CO2)
+## Historical CO2 Data analysis and visualization 
 
-#filter emissions 0 and use tidyverse groupby country minimum year
+```{r, message = FALSE}
+#read in cleaned data
+cleanedC02 <- 
+  read.csv("~/Desktop/QBS/QBS181/FinalProject/QBSsquad/CO2_Cleaned_V2.csv",
+           sep=",")
 
-CO2_no0<-CO2 %>% group_by(min(Year)) %>% filter(CO2.emission..Tons.!=0)
-
-CO2_no0 %>% 
-    group_by(Country) %>% 
-    slice(which.min(Year))
-
-CO2_no0 <- data.table(CO2_no0)
-
-#removing duplicates
-CO2_duplicates <- CO2_no0[!duplicated(CO2_no0$Country),]
-CO2_duplicates 
-
-#finding  firstyear where CO2 is nonzero value
-CO2_no_year_min <- CO2_no0[, list(Year = min(Year)), by = Country] 
-CO2_no_year_min[]
-
-#graphic of start years for different countries
-plot(CO2_no_year_min$Year,main="Earliest Year with CO2 Data",
-     xlab="Index",ylab="Year")
-abline(h=1950,col="blue")
-```
-
-```{r}
-#finding CO2 emission/population 
-
-CO2total_byCountry <- aggregate(CO2_no0$CO2.emission..Tons., by=list(Category=CO2_no0$Country), FUN=sum) 
+#sum of CO2 emissions
+CO2total_byCountry <- aggregate(cleanedC02$CO2.emission..Tons., by=list(Category=cleanedC02$Country), FUN=sum) 
 
 colnames(CO2total_byCountry)[1] <- "Country"
 colnames(CO2total_byCountry)[2] <- "CO2.Total"
 
-CO2total_byCountry
+#join original table to obtain population data
+CO2total_byCountry <- CO2total_byCountry %>% inner_join(cleanedC02) %>% select("Country","CO2.Total","Population.2022.") #duplicates made
 
-CO2total_byCountry <- CO2total_byCountry %>% inner_join(CO2_duplicates) %>% select("Country","CO2.Total","Population.2022.")
+#removing those duplicates
+CO2total_byCountry_clean <- 
+  CO2total_byCountry[!duplicated(CO2total_byCountry$Country),]
 
-CO2total_byCountry$CO2perPop <- NULL
-CO2total_byCountry$CO2perPop <- CO2total_byCountry$CO2.Total/CO2total_byCountry$Population.2022.
-CO2total_byCountry
 
-colnames(CO2total_byCountry)[2] <- "CO2.Total.Per.Country"
-colnames(CO2total_byCountry)[4] <- "CO2.per.Person.per.Country"
-
-summary(CO2total_byCountry)
-CO2total_byCountry 
+#numerical summary of CO2
+summary(CO2total_byCountry_clean)
 
 ```
  
  
- Aim 1.2A: To visualize the cumulative CO2 emissions by continent
+## Aim 1.2A: To visualize the cumulative CO2 emissions by continent
 ```{r,message=FALSE}
-CO2total_byCountry$continent <- countrycode(sourcevar = CO2total_byCountry[,"Country"],
+#obtaining continent data and matching countries to their respective continent
+CO2total_byCountry_clean$continent <- countrycode(sourcevar = CO2total_byCountry_clean[,"Country"],
                                   origin = "country.name",
                                   destination = "continent")
 
-CO2total_byContinent <- aggregate(CO2total_byCountry$CO2.Total.Per.Country, by=list(Category=CO2total_byCountry$continent), FUN=sum)
+#summing emissions based on continent
+CO2total_byContinent <- aggregate(CO2total_byCountry_clean$CO2.Total, by=list(Category=CO2total_byCountry_clean$continent), FUN=sum)
 
-CO2total_byContinent 
-colnames(CO2total_byContinent) <- c("Geographic_Region","Total_CO2_Emissions")
 
+colnames(CO2total_byContinent) <- c("Continent","Total_CO2_Emissions")
+
+#read in world map from ggplot2 to use later in mapping data
 world <- map_data("world")
-View(world)
-#Add the data you want to map countries by to world
-#In this example, I add lengths of country names plus some offset
 
-which(CO2total_byCountry$Country=="United States")
-CO2total_byCountry$Country[171] <- "USA" #coding USA differently 
-#because world data has it as USA, but CO2 data has it as United States
-which(world$region=="USA")
-CO2total_byCountry[171,]
+#finding how world data 
+#codes country names to ensure complete inner joining
+table(world$region) 
 
-world <- inner_join(world,CO2total_byCountry,by=c("region"="Country"))
+which(CO2total_byCountry_clean$Country=="United States")
+which(CO2total_byCountry_clean$Country=="Democratic Republic of Congo")
+CO2total_byCountry_clean$Country[211] <- "USA"
+CO2total_byCountry_clean$Country[53] <- "Democratic Republic of the Congo"
 
-#barplot of CO2 total emissions in world map
-continent_barplot <- ggplot(data=subset(CO2total_byCountry,!is.na(continent)),aes(x=continent,y=CO2.Total.Per.Country,fill=continent)) + geom_bar(stat="identity",position="dodge")
+#USA and DRC coded differently in the two joining datasets 
 
-continent_barplot <- continent_barplot + labs(x="Continent",y="Total CO2 Emissions (Tons)",title="CO2 Totals by Continent",fill="Continent")
+world <- inner_join(world,CO2total_byCountry_clean,by=c("region"="Country"))
+
+#Barplot of CO2 total emissions in world map
+continent_barplot <- ggplot(data=subset(CO2total_byCountry_clean, !is.na(continent)),aes(x=continent,y=CO2.Total,fill=continent)) + geom_bar(stat="identity",position="dodge")
+
+continent_barplot <- continent_barplot + labs(x="Continent", 
+y="Total CO2 Emissions (Tons)",title="CO2 Totals by Continent",fill="Continent")
+
 continent_barplot
 
 #graphically presenting CO2 emission in world map
 gg <- ggplot() + theme(legend.position="bottom",legend.key.size = unit(0.5, "cm"),legend.key.width = unit(1,"cm")) + labs(fill="CO2 Total(tons)/Country",x="Longitude",y="Latitude")
-gg <- gg + geom_map(data=world, map=world, aes(map_id=region,x=long, y=lat, fill=CO2.Total.Per.Country))
+gg <- gg + geom_map(data=world, map=world, aes(map_id=region,x=long, y=lat,
+                                               fill=CO2.Total))
 
-gg <- gg + scale_fill_gradient(low = "green", high = "red", guide = "colourbar",aesthetics = "fill") + scale_y_continuous(limits = c(-100,100)) + scale_x_continuous(limits = c(-175,175)) + scale_colour_continuous(labels="scientific")
-gg <- gg + coord_equal() + ggtitle("World View of CO2 Emissions")
+gg <- gg + scale_fill_gradient(low = "green", high = "red", guide = "colourbar",
+                               aesthetics = "fill") + 
+  scale_y_continuous(limits =c(-100,100)) + 
+  scale_x_continuous(limits = c(-175,175)) + 
+  scale_colour_continuous(labels="scientific")
+
+gg <- gg + coord_equal() + ggtitle("Cumulative View of CO2 Emissions")
+
 gg
 
 #saving World Heat Map
-ggsave(
-  "WorldHeatMapCO2.png",
-  gg,
-  height = 5,
-  width = 7,
-  dpi = 1200
-)
+#ggsave(
+   #"CumulativeWorldMap.png",
+   #gg,
+   #height = 5,
+   #width = 7,
+   #dpi = 1200
+# )
 
 #saving continent barplot
-ggsave(
-  "CO2ContinentBarplot.png",
-  continent_barplot,
-  scale = 5,
-  dpi = 1200
-)
+# ggsave(
+#   "CO2ContinentBarplot.png",
+#   continent_barplot,
+#   scale = 5,
+#   dpi = 1200
+# )
 
 ```
- 
-Analyze the top 10 countries that emit the most CO2
-```{r}
-top10Countries <- CO2total_byCountry[order(-CO2total_byCountry$CO2.Total.Per.Country),]
 
-top3Africa<-head(top10Countries[top10Countries$continent=="Africa",],3)
-top3Americas<-head(top10Countries[top10Countries$continent=="Americas",],3)
-top3Asia<-head(top10Countries[top10Countries$continent=="Asia",],3)
-top3Europe<-head(top10Countries[top10Countries$continent=="Europe",],3)
-top3Oceania<-head(top10Countries[top10Countries$continent=="Oceania",],3)
+## The below code is to make a world heat map with just 2019 data to compare with the cumulative map. 
+```{r, message = FALSE}
+#subset at year 2019
+cleanedC02_2019<-cleanedC02[cleanedC02$Year == "2019",]
+
+#below code is same as cumulative analysis 
+CO2total_byCountry_2019 <- aggregate(cleanedC02_2019$CO2.emission..Tons., by=list(Category=cleanedC02_2019$Country), FUN=sum) 
+
+colnames(CO2total_byCountry_2019)[1] <- "Country"
+colnames(CO2total_byCountry_2019)[2] <- "CO2.Total"
+
+CO2total_byCountry_2019<- CO2total_byCountry_2019 %>% 
+  inner_join(cleanedC02_2019) %>% 
+  select("Country","CO2.Total","Population.2022.")
+
+which(CO2total_byCountry_2019$Country=="United States")
+which(CO2total_byCountry_2019$Country=="Democratic Republic of Congo")
+CO2total_byCountry_2019$Country[211] <- "USA"#coding USA differently 
+#because world data has it as USA, but CO2 data has it as United States
+
+CO2total_byCountry_2019$Country[53] <- "Democratic Republic of the Congo"
+
+#new variables made for clarity
+world2 <- map_data("world")
+
+world2 <- inner_join(world2,CO2total_byCountry_2019,by=c("region"="Country"))
+
+gg2 <- ggplot() + theme(legend.position="bottom",legend.key.size = unit(0.5, "cm"),legend.key.width = unit(1,"cm")) + labs(fill="CO2 Total(tons)/Country",x="Longitude",y="Latitude")
+gg2 <- gg2 + geom_map(data=world2, map=world2, aes(map_id=region,x=long, y=lat, fill=CO2.Total))
+
+gg2 <- gg2 + scale_fill_gradient(low = "green", high = "red", 
+                                 guide = "colourbar",aesthetics = "fill") + scale_y_continuous(limits = c(-100,100)) + 
+  scale_x_continuous(limits = c(-175,175)) + 
+  scale_colour_continuous(labels="scientific")
+
+gg2 <- gg2 + coord_equal() + ggtitle("World View of CO2 Emissions in 2019")
+
+gg2
+
+
+#ggsave(
+   #"C02WorldMap_2019.png",
+   #gg2,
+   #height = 5,
+   #width = 7,
+   #dpi = 1200
+# )
+
+
+
+```
+
+## Analyze the top 3 countries that emit the most CO2
+```{r, message = FALSE}
+topCountries <- 
+  CO2total_byCountry_clean[order(-CO2total_byCountry_clean$CO2.Total),]
+
+top3Africa<-head(topCountries[topCountries$continent=="Africa",],3)
+top3Americas<-head(topCountries[topCountries$continent=="Americas",],3)
+top3Asia<-head(topCountries[topCountries$continent=="Asia",],3)
+top3Europe<-head(topCountries[topCountries$continent=="Europe",],3)
+top3Oceania<-head(topCountries[topCountries$continent=="Oceania",],3)
 
 top3pContinent <- rbind(top3Africa,top3Americas,top3Asia,top3Europe,top3Oceania)
 
 colnames(top3pContinent)
 
-mostEmissions <- ggplot(top3pContinent,aes(x=continent,y=CO2.Total.Per.Country))
- 
-colnames(top10Countries)
+mostEmissions <- ggplot(top3pContinent,aes(x=continent,y=CO2.Total))
 
 colnames(top3pContinent)
 
 mostEmissions<- mostEmissions +
-  geom_text_repel(aes(label = Country), size = 2.5)+
-  geom_point(aes(colour=CO2.Total.Per.Country))+
+  geom_text_repel(aes(label = top3pContinent$Country), size = 2)+
+  geom_point(aes(colour=top3pContinent$CO2.Total))+
   ggtitle(expression(atop("Top 3 CO2 Country Emissions per Continent",
                           atop(italic("CO2 Total from Available Data"),""))))+
   xlab("Continent") +
   ylab("CO2 Emissions in Tons")+
+  labs(col="CO2 Emissions Total (tons)")+
   theme(plot.title = element_text(hjust=0.5))
 
 
 
-ggsave(
-  "mostEmissionperCountry.png",
-  mostEmissions,
-  width = 10,
-  height = 7.5,
-  dpi = 1200
-)
+
+# To save a copy of the mostEmissions plot
+#ggsave(
+   #"mostEmissionperCountry.png",
+   #mostEmissions,
+   #width = 10,
+   #height = 7.5,
+   #dpi = 1200
+# )
 ```
 
-C02 Emissions by Area:
+## C02 Emissions by Area:
 ```{r,message=FALSE}
-cleanedC02 <- read.csv("~/Desktop/QBS/QBS181/FinalProject/QBSsquad/CO2_Cleaned_V2.csv",sep=",")
+#rerunning CO2total_byCountry code because some countries were coded differently
+cleanedC02 <- 
+  read.csv("~/Desktop/QBS/QBS181/FinalProject/QBSsquad/CO2_Cleaned_V2.csv",
+           sep=",")
+#similar steps as histoical analysis
+CO2total_byCountry_clean <- aggregate(cleanedC02$CO2.emission..Tons., by=list(Category=cleanedC02$Country), FUN=sum) 
 
-View(cleanedC02)
-colnames(cleanedC02)
+colnames(CO2total_byCountry_clean)[1] <- "Country"
+colnames(CO2total_byCountry_clean)[2] <- "CO2.Total"
+ 
+cleanedC02 <- inner_join(cleanedC02,CO2total_byCountry_clean) %>% select("Country","Area","X..of.World","CO2.Total","Population.2022.")
 
-cleanedC02 <- cleanedC02[!duplicated(cleanedC02$Country),]
-cleanedC02 <- inner_join(cleanedC02,CO2total_byCountry) %>% select("Country","Area","X..of.World","CO2.Total.Per.Country")
-
-View(cleanedC02)
-  
-colnames(CO2total_byCountry)
 cleanedC02$X..of.World <- as.numeric(gsub("[\\%,]","",cleanedC02$X..of.World))
 
-landmass_C02_model <- lm(cleanedC02$CO2.Total.Per.Country~cleanedC02$Area,data=cleanedC02)
+#testing association between country area and C02 emissions via Pearson's R
+area_co2_corr <- cor.test(cleanedC02$Area,cleanedC02$CO2.Total)
 
-summary(landmass_C02_model)
+areavsco2plot <- ggplot(data=cleanedC02,aes(x=Area,y=CO2.Total))+
+  geom_point(aes(fill=CO2.Total)) + 
+  ggtitle("Country Area vs. Total CO2 Emission") + 
+  labs(x="Area",y="Total CO2 Emissions (Tons)",
+       title="CO2 Emissions vs. Country Area (km2)") + geom_text(aes(label=ifelse(Area>5e6,as.character(Country),'')),
+size=3,hjust=1.2,vjust=-1.4)+stat_cor(method = "pearson", 
+                                      label.x = 0e0, label.y = 2e13) 
 
-area_co2_corr <- cor.test(cleanedC02$Area,cleanedC02$CO2.Total.Per.Country)
-landmass <- cor.test(cleanedC02$X..of.World,cleanedC02$CO2.Total.Per.Country)
-
-areavsco2plot <- ggplot(data=cleanedC02,aes(x=Area,y=CO2.Total.Per.Country))+geom_point() + ggtitle("Country Area vs. Total CO2 Emission") + labs(x="Area",y="Total CO2 Emissions (Tons)",title="CO2 Emissions vs. Country Area (km2)") + geom_text(aes(label=ifelse(CO2.Total.Per.Country>1e13,as.character(Country),'')),hjust=1.2,vjust=0)+stat_cor(method = "pearson", label.x = 0, label.y = 2e13) 
-
-ggsave(
-  "areavsco2plot.png",
-  areavsco2plot,
-  width = 10,
-  height = 7.5,
-  dpi = 1200
-)
+#ggsave(
+   #"areavsco2plot.png",
+   #areavsco2plot,
+   #width = 10,
+   #height = 7.5,
+   #dpi = 1200
+# )
 
 ```
 
-C02 Emissions in Developed vs. Non-developed:
-```{r}
-dat1 <- read.csv("~/Desktop/QBS/QBS181/FinalProject/CO2_emission_by_countries.csv", sep=",")
+## Read in "Our World in Data" CO2 dataset to obtain GDP information
+```{r, message = FALSE}
+dat1 <- 
+  read.csv("~/Desktop/QBS/QBS181/FinalProject/QBSsquad/CO2_Cleaned_V2.csv",
+           sep=",")
 x <- getURL("https://raw.githubusercontent.com/owid/co2-data/master/owid-co2-data.csv")
 dat2 <- read.csv(text = x)
 class(dat2)
@@ -276,22 +329,22 @@ d2.gdp, d2.co2_per_gdp, d2.co2_per_capita, d2.coal_co2, d2.coal_co2_per_capita
       JOIN dat2 AS d2
       ON d1.Country=d2.country
       AND d1.Year=d2.year")
-#View(merged.dat)
-#colnames(merged.dat)
 
-
-merged.dat
+#merged.dat
 merged.dat <- na.omit(merged.dat)
 ```
 
-Finding Averages:
-```{r}
-avgCO2byCountry <- aggregate(merged.dat$CO2.emission..Tons.,by=list(Category=merged.dat$Country), FUN=mean)
-avgGDP <- aggregate(merged.dat$gdp,by=list(Category=merged.dat$Country), FUN=mean)
-avgC02perGDP <- aggregate(merged.dat$co2_per_gdp,by=list(Category=merged.dat$Country), FUN=mean)
-avgC02perCapita <- aggregate(merged.dat$co2_per_capita,by=list(Category=merged.dat$Country), FUN=mean)
-avgCoalC02 <- aggregate(merged.dat$coal_co2,by=list(Category=merged.dat$Country), FUN=mean)
-avgCoalC02perCapita <- aggregate(merged.dat$coal_co2_per_capita,by=list(Category=merged.dat$Country), FUN=mean)
+## Finding Average CO2 Emissions per Capita 
+Solved by = total CO2 / total Population
+```{r, message = FALSE}
+avgCO2byCountry <- aggregate(merged.dat$CO2.emission..Tons.,
+                             by=list(Category=merged.dat$Country), FUN=mean)
+avgGDP <- aggregate(merged.dat$gdp,by=list(Category=merged.dat$Country),
+                    FUN=mean)
+avgC02perGDP <- aggregate(merged.dat$co2_per_gdp,
+                          by=list(Category=merged.dat$Country), FUN=mean)
+avgC02perCapita <- aggregate(merged.dat$co2_per_capita,
+                             by=list(Category=merged.dat$Country), FUN=mean)
 
 avgC02perCapita <-na.omit(avgC02perCapita)
 avgC02perCapita_10 <- avgC02perCapita[order(avgC02perCapita$x),]
@@ -313,20 +366,24 @@ capitaplot <- ggplot(avgC02perCapita_10,
   
 capitaplot
 
-
-ggsave(
-  "capitaplot.png",
-  capitaplot,
-  width = 5,
-  height = 5,
-  dpi = 1200
-)
+#to save plot
+# ggsave(
+#    "capitaplot.png",
+#    capitaplot,
+#    width = 7,
+#    height = 5,
+#    dpi = 1200
+#  )
 ```
 
-C02 by GDP:
-```{r}
+## C02 Emissions in Developed vs. Non-developed:
+### Setting "Developed" threshold to greater than $9000 GDP per capita
+```{r, message = FALSE}
+cleanedC02 <- 
+  read.csv("~/Desktop/QBS/QBS181/FinalProject/QBSsquad/CO2_Cleaned_V2.csv",
+           sep=",")
 colnames(avgGDP) <- c("Country","GDP_Average")
-avgGDP <- avgGDP %>% inner_join(CO2_duplicates) %>% select("Country","GDP_Average","Population.2022.")
+avgGDP <- avgGDP %>% inner_join(cleanedC02) %>% select("Country","GDP_Average","Population.2022.")
 avgGDP <- avgGDP %>% mutate(GDPperCapita = GDP_Average/Population.2022.)
 
 #creating ordinal data for developed vs. developing
@@ -335,10 +392,10 @@ develop_ord <- ifelse(avgGDP$GDPperCapita>=9000,"developed",
                       ifelse(avgGDP$GDPperCapita<9000,"developing",0))
 avgGDP$DevelopStatus <- develop_ord
 
-#merging C02 Data
-avgGDP <- avgGDP %>% inner_join(CO2_duplicates) %>% select("Country","GDP_Average","Population.2022.","GDPperCapita","CO2.emission..Tons.","DevelopStatus")
-
-avgGDP[avgGDP$Country=="India",]
+#merging C02 Data again to get CO2 emissions 
+avgGDP <- avgGDP %>% inner_join(cleanedC02) %>%
+  select("Country","GDP_Average","Population.2022.",
+         "GDPperCapita","CO2.emission..Tons.","DevelopStatus")
 
 developed <- avgGDP[avgGDP$DevelopStatus=="developed",]
 developing <- avgGDP[avgGDP$DevelopStatus=="developing",]
@@ -357,7 +414,8 @@ DevelopvsDeveloping$Status <- c("Developed","Developing")
 colnames(DevelopvsDeveloping)[1] <- "CO2_Total"
 
 
-DevelopvDevelopingplot <- ggplot(DevelopvsDeveloping,aes(x=Status,y=CO2_Total,fill=Status))+
+DevelopvDevelopingplot <- ggplot(DevelopvsDeveloping,
+                                 aes(x=Status,y=CO2_Total,fill=Status))+
   geom_bar(stat="identity") +
   theme(axis.text.x = element_text(size = 11)) +
   scale_x_discrete(guide = guide_axis(n.dodge = 3))+
@@ -366,14 +424,17 @@ DevelopvDevelopingplot <- ggplot(DevelopvsDeveloping,aes(x=Status,y=CO2_Total,fi
   ggtitle("C02 Emission Differences by Development Status")+
   theme_gray()+
   theme(plot.title = element_text(hjust=0.5))+
-  theme(text = element_text(family = 'serif'))
+  theme(text = element_text(family = 'serif'))+
+  stat_cor(method = "pearson", label.x = 0, label.y = 0) 
 
-ggsave(
-  "developCO2plot.png",
-  DevelopvDevelopingplot,
-  scale = 3,
-  dpi = 1200
-)
+#save plot
+# ggsave(
+#    "developCO2plot.png",
+#    DevelopvDevelopingplot,
+#    width = 7,
+#    height = 5,
+#    dpi = 1200
+#  )
 
 ```
 
