@@ -22,6 +22,7 @@ library(rworldmap)
 library(RCurl)
 library(httr)
 library(sqldf)
+library(forecast)
 ```
 
 Read in the raw data
@@ -36,7 +37,7 @@ rawCO2<-CO2
 rawCO2%>% summarise_all(~ sum(is.na(.)))
 ```
 
-Find all the countires with NA in each column
+Find all the countries with NA in each column
 ```{r}
 naCode <- rawCO2 %>% filter(is.na(Code)) %>% distinct(Country) 
 naCall <- rawCO2 %>% filter(is.na(Calling.Code)) %>% distinct(Country)
@@ -98,7 +99,7 @@ CO2_duplicates
 
 #finding  firstyear where CO2 is nonzero value
 CO2_no_year_min <- CO2_no0[, list(Year = min(Year)), by = Country] 
-CO2_no_year_min[]
+CO2_no_year_min[which(CO2_no_year_min$Year==max(CO2_no_year_min[]$Year)),]
 
 #graphic of start years for different countries
 plot(CO2_no_year_min$Year,main="Earliest Year with CO2 Data",
@@ -131,7 +132,7 @@ CO2total_byCountry
 ```
  
  
- Aim 1.2A: To visualize the cumulative CO2 emissions by continent
+Aim 1.2A: To visualize the cumulative CO2 emissions by continent
 ```{r,message=FALSE}
 CO2total_byCountry$continent <- countrycode(sourcevar = CO2total_byCountry[,"Country"],
                                   origin = "country.name",
@@ -230,7 +231,7 @@ ggsave(
 
 C02 Emissions by Area:
 ```{r,message=FALSE}
-cleanedC02 <- read.csv("~/Desktop/QBS/QBS181/FinalProject/QBSsquad/CO2_Cleaned_V2.csv",sep=",")
+cleanedC02 <- read.csv("CO2_Cleaned_V2.csv",sep=",")
 
 View(cleanedC02)
 colnames(cleanedC02)
@@ -264,7 +265,7 @@ ggsave(
 
 C02 Emissions in Developed vs. Non-developed:
 ```{r}
-dat1 <- read.csv("~/Desktop/QBS/QBS181/FinalProject/CO2_emission_by_countries.csv", sep=",")
+dat1 <- read.csv("CO2_emission_by_countries.csv", sep=",")
 x <- getURL("https://raw.githubusercontent.com/owid/co2-data/master/owid-co2-data.csv")
 dat2 <- read.csv(text = x)
 class(dat2)

@@ -7,6 +7,7 @@ output: pdf_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+library(forecast)
 ```
 
 ```{r}
@@ -24,9 +25,10 @@ dim(na.omit(CO2_forecasting))
 CO2_no_year_min[which(CO2_no_year_min$Year==max(CO2_no_year_min[]$Year)),]
 # Use 1992-2019 data to forecast
 CO2_forecasting<-CO2_forecasting %>% 
-  filter(Year>1991&Year<2020) %>% 
+  filter(Year>1900&Year<2020) %>% 
   group_by(Country)
 View(CO2_forecasting)
+
 # forecast on top 6
 # US
 CO2_US<-CO2_forecasting %>%
@@ -46,20 +48,19 @@ CO2_RU<-CO2_forecasting %>%
 # France
 CO2_FR<-CO2_forecasting %>%
   filter(Country=="France")
-# Poland
-CO2_PO<-CO2_forecasting %>%
-  filter(Country=="Poland")
+# # India
+# CO2_IN<-CO2_forecasting %>%
+#   filter(Country=="India")
 
-# plot
-plot(CO2_US$Year, CO2_US$CO2.emission..Tons.)
-plot(CO2_UK$Year, CO2_UK$CO2.emission..Tons.)
-plot(CO2_GE$Year, CO2_GE$CO2.emission..Tons.)
-plot(CO2_CH$Year, CO2_CH$CO2.emission..Tons.)
-plot(CO2_RU$Year, CO2_RU$CO2.emission..Tons.)
-plot(CO2_FR$Year, CO2_FR$CO2.emission..Tons.)
+# # plot
+# plot(CO2_US$Year, CO2_US$CO2.emission..Tons.)
+# plot(CO2_UK$Year, CO2_UK$CO2.emission..Tons.)
+# plot(CO2_GE$Year, CO2_GE$CO2.emission..Tons.)
+# plot(CO2_CH$Year, CO2_CH$CO2.emission..Tons.)
+# plot(CO2_RU$Year, CO2_RU$CO2.emission..Tons.)
+# plot(CO2_FR$Year, CO2_FR$CO2.emission..Tons.)
 
 
-library(forecast)
 # US
 pred.us<-ts(CO2_US$CO2.emission..Tons., start=1992,frequency = 1) %>% 
   auto.arima() %>% 
@@ -90,83 +91,108 @@ pred.fr<-ts(CO2_FR$CO2.emission..Tons.,start=1992,frequency = 1) %>%
   auto.arima() %>% 
   forecast(h=30)
 
-# plot
-par(mfrow=c(2,3))
-plot(pred.us)
-plot(pred.uk)
-plot(pred.ge)
-plot(pred.ch)
-plot(pred.ru)
-plot(pred.fr)
+pred.in<-ts(CO2_IN$CO2.emission..Tons.,start=1992,frequency = 1) %>% 
+  auto.arima() %>% 
+  forecast(h=30)
 
+# # plot
+# par(mfrow=c(2,3))
+# plot(pred.us)
+# plot(pred.uk)
+# plot(pred.ge)
+# plot(pred.ch)
+# plot(pred.ru)
+# plot(pred.fr)
+
+```
+
+```{r}
+library(devtools)
+devtools::install_github('cttobin/ggthemr')
+library(ggthemr)
+ggthemr("dust")
 
 US.plot<-autoplot(pred.us)+
-  ggtitle("Forecasts for The United States")+
+  ggtitle("United States")+
   labs(x = "Year", y = "CO2 Emission")+
   theme(axis.title.x = element_text(vjust = 0),
-        axis.title.y = element_text(vjust = 2))
+        axis.title.y = element_text(vjust = 2))+
+  ylim(c(2.75e+10, 6.5e+11))
+
+UK.plot<-autoplot(pred.uk)+
+  ggtitle("United Kingdom")+
+  labs(x = "Year", y = "CO2 Emission")+
+  theme(axis.title.x = element_text(vjust = 0),
+        axis.title.y = element_text(vjust = 2))+
+  ylim(c(2.75e+10, 6.5e+11))
+
+GE.plot<-autoplot(pred.ge)+
+  ggtitle("Germany")+
+  labs(x = "Year", y = "CO2 Emission")+
+  theme(axis.title.x = element_text(vjust = 0),
+        axis.title.y = element_text(vjust = 2))+
+  ylim(c(2.75e+10, 6.5e+11))
+
+CH.plot<-autoplot(pred.ch)+
+  ggtitle("China")+
+  labs(x = "Year", y = "CO2 Emission")+
+  theme(axis.title.x = element_text(vjust = 0),
+        axis.title.y = element_text(vjust = 2))+
+  ylim(c(2.75e+10, 6.5e+11))
+
+RU.plot<-autoplot(pred.ru)+
+  ggtitle("Russia")+
+  labs(x = "Year", y = "CO2 Emission")+
+  theme(axis.title.x = element_text(vjust = 0),
+        axis.title.y = element_text(vjust = 2))+
+  ylim(c(2.75e+10, 6.5e+11))
+
+FR.plot<-autoplot(pred.fr)+
+  ggtitle("France")+
+  labs(x = "Year", y = "CO2 Emission")+
+  theme(axis.title.x = element_text(vjust = 0),
+        axis.title.y = element_text(vjust = 2))+
+  ylim(c(2.75e+10, 6.5e+11))
+
+US.plot
+UK.plot
+GE.plot
+CH.plot
+RU.plot
+FR.plot
+
 ggsave(
-  "US.plot.png",
+  "US.scaled.png",
   US.plot,
   width = 10,
   height = 7.5
 )
-
-UK.plot<-autoplot(pred.uk)+
-  ggtitle("Forecasts for The United Kingdom")+
-  labs(x = "Year", y = "CO2 Emission")+
-  theme(axis.title.x = element_text(vjust = 0),
-        axis.title.y = element_text(vjust = 2))
 ggsave(
-  "UK.plot.png",
+  "UK.scaled.png",
   UK.plot,
   width = 10,
   height = 7.5
 )
-
-GE.plot<-autoplot(pred.ge)+
-  ggtitle("Forecasts for Germany")+
-  labs(x = "Year", y = "CO2 Emission")+
-  theme(axis.title.x = element_text(vjust = 0),
-        axis.title.y = element_text(vjust = 2))
 ggsave(
-  "GE.plot.png",
+  "GE.scaled.png",
   GE.plot,
   width = 10,
   height = 7.5
 )
-
-CH.plot<-autoplot(pred.ch)+
-  ggtitle("Forecasts for China")+
-  labs(x = "Year", y = "CO2 Emission")+
-  theme(axis.title.x = element_text(vjust = 0),
-        axis.title.y = element_text(vjust = 2))
 ggsave(
-  "CH.plot.png",
+  "CH.scaled.png",
   CH.plot,
   width = 10,
   height = 7.5
 )
-
-RU.plot<-autoplot(pred.ru)+
-  ggtitle("Forecasts for Russia")+
-  labs(x = "Year", y = "CO2 Emission")+
-  theme(axis.title.x = element_text(vjust = 0),
-        axis.title.y = element_text(vjust = 2))
 ggsave(
-  "RU.plot.png",
+  "RU.scaled.png",
   RU.plot,
   width = 10,
   height = 7.5
 )
-
-FR.plot<-autoplot(pred.fr)+
-  ggtitle("Forecasts for France")+
-  labs(x = "Year", y = "CO2 Emission")+
-  theme(axis.title.x = element_text(vjust = 0),
-        axis.title.y = element_text(vjust = 2))
 ggsave(
-  "FR.plot.png",
+  "FR.scaled.png",
   FR.plot,
   width = 10,
   height = 7.5
@@ -197,7 +223,7 @@ CO2_forecasting_continent<-CO2_forecasting %>%
   dplyr::group_by(Year, Continent) %>%
   dplyr::summarise(Sum=sum(CO2.emission..Tons.))
 CO2_forecasting_continent<-na.omit(CO2_forecasting_continent)
-View(CO2_forecasting_continent)
+# View(CO2_forecasting_continent)
 
 Asia<-CO2_forecasting_continent %>% 
   filter(Continent=="Asia")
@@ -240,84 +266,88 @@ ts_data_oc = ts(Oceania$Sum,start=1992,frequency = 1)
 arima.ts.oc = auto.arima(ts_data_oc)
 pred.oc = forecast(arima.ts.oc,h=30)
 
-# plot
-par(mfrow=c(2,3)) 
-plot(pred.as, xaxt="n")
-plot(pred.eu, xaxt="n")
-plot(pred.af, xaxt="n")
-plot(pred.am, xaxt="n")
-plot(pred.oc, xaxt="n")
+# # plot
+# par(mfrow=c(2,3)) 
+# plot(pred.as, xaxt="n")
+# plot(pred.eu, xaxt="n")
+# plot(pred.af, xaxt="n")
+# plot(pred.am, xaxt="n")
+# plot(pred.oc, xaxt="n")
+```
 
+```{r}
 Asia.plot<-autoplot(pred.as)+
-  ggtitle("Forecasts for Asia")+
+  ggtitle("Asia")+
   labs(x = "Year", y = "CO2 Emission")+
   theme(axis.title.x = element_text(vjust = 0),
-        axis.title.y = element_text(vjust = 2))
-ggsave(
-  "Asia.plot.png",
-  Asia.plot,
-  width = 10,
-  height = 7.5
-)
+        axis.title.y = element_text(vjust = 2))+
+  ylim(c(1e+10,2e+12))
 
 Europe.plot<-autoplot(pred.eu)+
-  ggtitle("Forecasts for Europe")+
+  ggtitle("Europe")+
   labs(x = "Year", y = "CO2 Emission")+
   theme(axis.title.x = element_text(vjust = 0),
-        axis.title.y = element_text(vjust = 2))
-ggsave(
-  "Europe.plot.png",
-  Europe.plot,
-  width = 10,
-  height = 7.5
-)
+        axis.title.y = element_text(vjust = 2))+
+  ylim(c(1e+10,2e+12))
 
 Africa.plot<-autoplot(pred.af)+
-  ggtitle("Forecasts for Africa")+
+  ggtitle("Africa")+
   labs(x = "Year", y = "CO2 Emission")+
   theme(axis.title.x = element_text(vjust = 0),
-        axis.title.y = element_text(vjust = 2))
-ggsave(
-  "Africa.plot.png",
-  Africa.plot,
-  width = 10,
-  height = 7.5
-)
+        axis.title.y = element_text(vjust = 2))+
+  ylim(c(1e+10,2e+12))
 
 Americas.plot<-autoplot(pred.am)+
-  ggtitle("Forecasts for Americas")+
+  ggtitle("Americas")+
   labs(x = "Year", y = "CO2 Emission")+
   theme(axis.title.x = element_text(vjust = 0),
-        axis.title.y = element_text(vjust = 2))
-ggsave(
-  "Americas.plot.png",
-  Americas.plot,
-  width = 10,
-  height = 7.5
-)
+        axis.title.y = element_text(vjust = 2))+
+  ylim(c(1e+10,2e+12))
 
 OC.plot<-autoplot(pred.oc)+
-  ggtitle("Forecasts for Oceania")+
+  ggtitle("Oceania")+
   labs(x = "Year", y = "CO2 Emission")+
   theme(axis.title.x = element_text(vjust = 0),
-        axis.title.y = element_text(vjust = 2))
+        axis.title.y = element_text(vjust = 2))+
+  ylim(c(1e+10,2e+12))
+
+
 ggsave(
-  "Oceania.plot.png",
+  "Oceania.scaled.png",
   OC.plot,
   width = 10,
   height = 7.5
 )
 
-FR.plot<-autoplot(pred.fr)+
-  ggtitle("Forecasts for France")+
-  labs(x = "Year", y = "CO2 Emission")+
-  theme(axis.title.x = element_text(vjust = 0),
-        axis.title.y = element_text(vjust = 2))
 ggsave(
-  "FR.plot.png",
-  FR.plot,
+  "Asia.scaled.png",
+  Asia.plot,
   width = 10,
   height = 7.5
 )
+ggsave(
+  "Europe.scaled.png",
+  Europe.plot,
+  width = 10,
+  height = 7.5
+)
+ggsave(
+  "Africa.scaled.png",
+  Africa.plot,
+  width = 10,
+  height = 7.5
+)
+ggsave(
+  "Americas.scaled.png",
+  Americas.plot,
+  width = 10,
+  height = 7.5
+)
+
+Asia.plot
+Europe.plot
+Americas.plot
+OC.plot
+Africa.plot
 ```
 
