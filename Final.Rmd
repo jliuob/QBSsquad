@@ -42,7 +42,8 @@ library(heatmaply)
 
 ## Data Cleaning
 ```{r Read in the raw data}
-rawDat<-read.csv("CO2 emission by countries.csv", na = c("", "NA"))
+data <- getURL("https://raw.githubusercontent.com/jliuob/QBSsquad/main/CO2_emission_by_countries.csv")
+rawDat <- read.csv(text = data)
 ```
 
 ```{r Check for all the NA entries}
