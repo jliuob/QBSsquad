@@ -438,7 +438,6 @@ DevelopvDevelopingplot <- ggplot(DevelopvsDeveloping,
 
 DevelopvDevelopingplot
 ```
-There are more countries.
 
 ## Aim 2.1 COVID CO2 emission analysis
 First, to examine global CO2 emission in pre-pandemic and pandemic years, a subset of data about 2018, 2019, and 2020 CO2 emission in all countries is created.
