@@ -12,7 +12,7 @@ The code below analyzes CO2 emission data from Kaggle. The three main goals are:
 3. Using this data for future emission predictions. 
 
 ## Libraries needed for this analysis:
-```{r setup, include=FALSE, message = FALSE}
+```{r setup, include=FALSE, message = FALSE, warning=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
 library(plyr)
@@ -35,9 +35,9 @@ library(sf)
 library(raster)
 library(spData)
 library(devtools)
-library(ggthemr)
 library(RColorBrewer)
 library(magrittr)
+library(heatmaply)
 ```
 
 ## Data Cleaning
@@ -106,6 +106,7 @@ summary(dat20$CO2.emission..Tons.)
 #Read in the cleaned version from excel
 y <- getURL("https://raw.githubusercontent.com/jliuob/QBSsquad/main/CO2_Cleaned_V2.csv")
 CO2 <- read.csv(text = y)
+colnames(CO2)[1] = "Country"
 #again, check for all the NA entries
 CO2 %>% summarise_all(~ sum(is.na(.)))
 CO2 <- CO2 %>% dplyr::select(-c(8,9))
@@ -641,7 +642,7 @@ We decided to predict the CO2 emissions in the next 30 years by using the data f
 
 ```{r extract and prepare the data for forecasting}
 # select three columns to do forecasting
-CO2_forecasting<-CO2 %>% select(Country, Year, CO2.emission..Tons.)
+CO2_forecasting<-CO2 %>% dplyr::select(Country, Year, CO2.emission..Tons.)
 # make sure there is no NA
 dim(CO2_forecasting)
 dim(na.omit(CO2_forecasting))
@@ -649,7 +650,7 @@ dim(na.omit(CO2_forecasting))
 CO2_no_year_min[which(CO2_no_year_min$Year==max(CO2_no_year_min[]$Year)),]
 # decided to use 1992-2019 data to do the forecasting
 CO2_forecasting<-CO2_forecasting %>% 
-  filter(Year>1900&Year<2020) %>% 
+  filter(Year>1991&Year<2020) %>% 
   group_by(Country)
 # View(CO2_forecasting)
 ```
@@ -700,6 +701,7 @@ pred.fr<-ts(CO2_FR$CO2.emission..Tons.,start=1992,frequency = 1) %>%
 We expect to see what's the increasing or decreasing trend of the CO2 emissions in the next 30 years. 
 ```{r plot the predictions of the six countries}
 # devtools::install_github('cttobin/ggthemr')
+library(ggthemr)
 ggthemr("dust")
 US.plot<-autoplot(pred.us)+
   ggtitle("United States")+
@@ -731,11 +733,11 @@ RU.plot<-autoplot(pred.ru)+
   theme(axis.title.x = element_text(vjust = 0),
         axis.title.y = element_text(vjust = 2))
 
-(FR.plot<-autoplot(pred.fr)+
+FR.plot<-autoplot(pred.fr)+
   ggtitle("France")+
   labs(x = "Year", y = "CO2 Emission")+
   theme(axis.title.x = element_text(vjust = 0),
-        axis.title.y = element_text(vjust = 2)))
+        axis.title.y = element_text(vjust = 2))
 
 # Save the plots 
 ggsave("US.png",US.plot,width = 10,height = 7.5)
@@ -757,7 +759,6 @@ FR.plot
 Next, plot the predictions on the same scales, from 2.75e+10 to 6.5e+11, to compare the predicted CO2 emissions among the six countries. 
 ```{r plot the predictions based on the same scale (countries)}
 # devtools::install_github('cttobin/ggthemr')
-ggthemr("dust")
 US.scaled.plot<-autoplot(pred.us)+
   ggtitle("United States")+
   labs(x = "Year", y = "CO2 Emission")+
@@ -801,12 +802,19 @@ FR.scaled.plot<-autoplot(pred.fr)+
   ylim(c(2.75e+10, 6.5e+11))
 
 # Save the plots 
-ggsave("US.scaled.png",US.plot,width = 10,height = 7.5)
-ggsave("UK.scaled.png",UK.plot,width = 10,height = 7.5)
-ggsave("GE.scaled.png",GE.plot,width = 10,height = 7.5)
-ggsave("CH.scaled.png",CH.plot,width = 10,height = 7.5)
-ggsave("RU.scaled.png",RU.plot,width = 10,height = 7.5)
-ggsave("FR.scaled.png",FR.plot,width = 10,height = 7.5)
+ggsave("US.scaled.png",US.scaled.plot,width = 10,height = 7.5)
+ggsave("UK.scaled.png",UK.scaled.plot,width = 10,height = 7.5)
+ggsave("GE.scaled.png",GE.scaled.plot,width = 10,height = 7.5)
+ggsave("CH.scaled.png",CH.scaled.plot,width = 10,height = 7.5)
+ggsave("RU.scaled.png",RU.scaled.plot,width = 10,height = 7.5)
+ggsave("FR.scaled.png",FR.scaled.plot,width = 10,height = 7.5)
+
+US.scaled.plot
+UK.scaled.plot
+GE.scaled.plot
+CH.scaled.plot
+RU.scaled.plot
+FR.scaled.plot
 ```
 
 ### Predictions on continents
@@ -816,7 +824,7 @@ CO2$Continent <- countrycode(sourcevar = CO2[,"Country"],
                                   origin = "country.name",
                                   destination = "continent")
 CO2_forecasting<-CO2 %>% 
-  select(Country, Year, CO2.emission..Tons.,Continent)
+  dplyr::select(Country, Year, CO2.emission..Tons.,Continent)
 # make sure there is no NA
 dim(CO2_forecasting)
 dim(na.omit(CO2_forecasting))
