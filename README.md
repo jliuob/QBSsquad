@@ -20,8 +20,8 @@ All visualizations, data, and code produced by this project are completely open 
 This project is licensed under the terms of the MIT license. See the LICENSE (https://github.com/jliuob/QBSsquad/blob/main/License) file for license rights and limitations (MIT).
 
 ## Citation:
-1) Bhatti, M. A. (2022, September 14). CO2 emission by Countries Year Wise (1750-2022). Kaggle. Retrieved October 7, 2022, from https://www.kaggle.com/datasets/moazzimalibhatti/co2-emission-by-countries-year-wise-17502022\
-2) Hannah Ritchie, Max Roser and Pablo Rosado   "2020" - "CO₂ and Greenhouse Gas Emissions". Published online at OurWorldInData.org. Retrieved from: 'https://ourworldindata.org/co2-and-other-greenhouse-gas-emissions' [Online Resource]\
+1) Bhatti, M. A. (2022, September 14). CO2 emission by Countries Year Wise (1750-2022). Kaggle. Retrieved October 7, 2022, from https://www.kaggle.com/datasets/moazzimalibhatti/co2-emission-by-countries-year-wise-17502022
+2) Hannah Ritchie, Max Roser and Pablo Rosado   "2020" - "CO₂ and Greenhouse Gas Emissions". Published online at OurWorldInData.org. Retrieved from: 'https://ourworldindata.org/co2-and-other-greenhouse-gas-emissions' [Online Resource]
 3) History of Climate Science Research | Center for Science Education. (n.d.). Retrieved October 7, 2022, from https://scied.ucar.edu/learning-zone/how-climate-works/history-climate-science-research
 
 
